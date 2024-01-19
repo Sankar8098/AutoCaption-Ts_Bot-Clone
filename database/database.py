@@ -1,63 +1,48 @@
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, scoped_session
-
 import os
-
-import threading
-import asyncio
-
-from sqlalchemy import Column, Integer, Boolean, String, ForeignKey, UniqueConstraint, func
-
+from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 from config import Config
-
-
-def start() -> scoped_session:
-    engine = create_engine(Config.DB_URL, client_encoding="utf8")
-    BASE.metadata.bind = engine
-    BASE.metadata.create_all(engine)
-    return scoped_session(sessionmaker(bind=engine, autoflush=False))
-
+import asyncpgsa
 
 BASE = declarative_base()
-SESSION = start()
 
-INSERTION_LOCK = threading.RLock()
 
-class custom_caption(BASE):
+class CustomCaption(BASE):
     __tablename__ = "caption"
     id = Column(Integer, primary_key=True)
     caption = Column(String)
-    
-    def __init__(self, id, caption):
-        self.id = id
-        self.caption = caption
 
-custom_caption.__table__.create(checkfirst=True)
+
+DB_URL = Config.DB_URL
+engine = create_engine(DB_URL)
+asyncpgsa.sa.init(engine)
+
+async def create_table():
+    async with engine.acquire() as conn:
+        await conn.execute('''CREATE TABLE IF NOT EXISTS caption (
+                                id serial PRIMARY KEY,
+                                caption varchar(255) NOT NULL)''')
+
 
 async def update_caption(id, caption):
-    with INSERTION_LOCK:
-        cap = SESSION.query(custom_caption).get(id)
-        if not cap:
-            cap = custom_caption(id, caption)
-            SESSION.add(cap)
-            SESSION.flush()
-        else:
-            SESSION.delete(cap)
-            cap = custom_caption(id, caption)
-            SESSION.add(cap)
-        SESSION.commit()
+    async with engine.acquire() as conn:
+        await conn.execute(
+            CustomCaption.__table__.insert().values(id=id, caption=caption)
+        )
+
 
 async def del_caption(id):
-    with INSERTION_LOCK:
-        msg = SESSION.query(custom_caption).get(id)
-        SESSION.delete(msg)
-        SESSION.commit()
+    async with engine.acquire() as conn:
+        await conn.execute(
+            CustomCaption.__table__.delete().where(CustomCaption.id == id)
+        )
+
 
 async def get_caption(id):
-    try:
-        caption = SESSION.query(custom_caption).get(id)
-        return caption
-    finally:
-        SESSION.close()
+    async with engine.acquire() as conn:
+        result = await conn.execute(
+            CustomCaption.__table__.select().where(CustomCaption.id == id)
+        )
+        return await result.first()
