@@ -1,45 +1,34 @@
-import datetime
 import motor.motor_asyncio
-
-class Database:
-
-    def __init__(self, uri, database_name):
-        self._client = motor.motor_asyncio.AsyncIOMotorClient(uri)
-        self.clinton = self._client[database_name]
-        self.col = self.clinton.USERS
+from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 BASE = declarative_base()
-
 
 class CustomCaption(BASE):
     __tablename__ = "caption"
     id = Column(Integer, primary_key=True)
     caption = Column(String)
-    
-async def create_table():
-    async with engine.acquire() as conn:
-        await conn.execute('''CREATE TABLE IF NOT EXISTS caption (
-                                id serial PRIMARY KEY,
-                                caption varchar(255) NOT NULL)''')
 
+class Database:
 
-async def update_caption(id, caption):
-    async with engine.acquire() as conn:
-        await conn.execute(
-            CustomCaption.__table__.insert().values(id=id, caption=caption)
-        )
+    def __init__(self, uri, database_name):
+        # Assuming you are using SQLAlchemy for 'engine'
+        self.engine = create_engine(uri)
+        BASE.metadata.create_all(self.engine)
+        Session = sessionmaker(bind=self.engine)
+        self.session = Session()
 
+    async def update_caption(self, id, caption):
+        new_caption = CustomCaption(id=id, caption=caption)
+        self.session.add(new_caption)
+        self.session.commit()
 
-async def del_caption(id):
-    async with engine.acquire() as conn:
-        await conn.execute(
-            CustomCaption.__table__.delete().where(CustomCaption.id == id)
-        )
+    async def del_caption(self, id):
+        caption_to_delete = self.session.query(CustomCaption).filter_by(id=id).first()
+        if caption_to_delete:
+            self.session.delete(caption_to_delete)
+            self.session.commit()
 
-
-async def get_caption(id):
-    async with engine.acquire() as conn:
-        result = await conn.execute(
-            CustomCaption.__table__.select().where(CustomCaption.id == id)
-        )
-        return await result.first()
+    async def get_caption(self, id):
+        return self.session.query(CustomCaption).filter_by(id=id).first()
