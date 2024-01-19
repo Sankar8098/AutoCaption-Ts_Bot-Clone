@@ -15,7 +15,7 @@ usercaption_position = Config.CAPTION_POSITION
 caption_position = usercaption_position.lower()
 
 @autocaption.on_message(filters.channel & (filters.document | filters.video | filters.audio ) & ~filters.edited & ~filters.service, group=-1)
-async defasync editing(bot, message):
+async def editing(bot, message):
       caption_text = await get_caption(Config.ADMIN_ID)
       try:
          caption_text = caption_text.caption
