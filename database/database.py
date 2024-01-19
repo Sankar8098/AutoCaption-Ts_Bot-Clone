@@ -1,10 +1,12 @@
-import os
-from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+import datetime
+import motor.motor_asyncio
 
-from config import Config
-import asyncpgsa
+class Database:
+
+    def __init__(self, uri, database_name):
+        self._client = motor.motor_asyncio.AsyncIOMotorClient(uri)
+        self.clinton = self._client[database_name]
+        self.col = self.clinton.USERS
 
 BASE = declarative_base()
 
@@ -13,12 +15,7 @@ class CustomCaption(BASE):
     __tablename__ = "caption"
     id = Column(Integer, primary_key=True)
     caption = Column(String)
-
-
-DB_URL = Config.DB_URL
-engine = create_engine(DB_URL)
-asyncpgsa.sa.init(engine)
-
+    
 async def create_table():
     async with engine.acquire() as conn:
         await conn.execute('''CREATE TABLE IF NOT EXISTS caption (
