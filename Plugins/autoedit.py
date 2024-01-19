@@ -3,55 +3,56 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-import asyncio
-from pyrogram import filters
-from bot import autocaption
-from config import Config
-from database.database import *
+import pyrogram, os, asyncio
 
-
+AutoCaptionBotV1 = pyrogram.Client(
+   name="AutoCaptionBotV1", api_id=app_id, api_hash=api_hash, bot_token=bot_token)
 # =
 usercaption_position = Config.CAPTION_POSITION
 caption_position = usercaption_position.lower()
 
-@autocaption.on_message(filters.channel & (filters.document | filters.video | filters.audio ) & ~filters.edited & ~filters.service, group=-1)
-async def editing(bot, message):
-      caption_text = await get_caption(Config.ADMIN_ID)
-      try:
-         caption_text = caption_text.caption
-      except:
-         caption_text = ""
-         pass 
-      if (message.document or message.video or message.audio): 
-          if message.caption:                        
-             file_caption = f"**{message.caption}**"                
-          else:
-             file_caption = ""           
-                                                 
-      try:
-          if caption_position == "top":
-             await bot.edit_message_caption(
-                 chat_id = message.chat.id, 
-                 message_id = message.message_id,
-                 caption = caption_text + "\n" + file_caption,
-                 parse_mode = "markdown"
-             )
-          elif caption_position == "bottom":
-             await bot.edit_message_caption(
-                 chat_id = message.chat.id, 
-                 message_id = message.message_id,
-                 caption = file_caption + "\n" + caption_text,
-                 parse_mode = "markdown"
-             )
-          elif caption_position == "nil":
-             await bot.edit_message_caption(
-                 chat_id = message.chat.id,
-                 message_id = message.message_id,
-                 caption = caption_text, 
-                 parse_mode = "markdown"
-             ) 
-      except:
-          pass
-              
-                   
-      
+@AutoCaptionBotV1.on_message(pyrogram.filters.private & pyrogram.filters.command(["start"]))
+def start_command(bot, update):
+  update.reply(start_message.format(update.from_user.mention), reply_markup=start_buttons(bot, update), parse_mode=pyrogram.enums.ParseMode.HTML, disable_web_page_preview=True)
+
+@AutoCaptionBotV1.on_callback_query(pyrogram.filters.regex("start"))
+def strat_callback(bot, update):
+  update.message.edit(start_message.format(update.from_user.mention), reply_markup=start_buttons(bot, update.message), parse_mode=pyrogram.enums.ParseMode.HTML, disable_web_page_preview=True)
+
+@AutoCaptionBotV1.on_callback_query(pyrogram.filters.regex("about"))
+def about_callback(bot, update): 
+  bot = bot.get_me()
+  update.message.edit(about_message.format(version=pyrogram.__version__, username=bot.mention), reply_markup=about_buttons(bot, update.message), parse_mode=pyrogram.enums.ParseMode.HTML, disable_web_page_preview=True)
+
+@AutoCaptionBotV1.on_message(pyrogram.filters.channel)
+def edit_caption(bot, update: pyrogram.types.Message):
+  motech, _ = get_file_details(update)
+  try:
+      try: update.edit(custom_caption.format(file_name=motech.file_name))
+      except pyrogram.errors.FloodWait as FloodWait:
+          asyncio.sleep(FloodWait.value)
+          update.edit(custom_caption.format(file_name=motech.file_name))
+  except pyrogram.errors.MessageNotModified: pass 
+    
+def get_file_details(update: pyrogram.types.Message):
+  if update.media:
+    for message_type in (
+        "photo",
+        "animation",
+        "audio",
+        "document",
+        "video",
+        "video_note",
+        "voice",
+        # "contact",
+        # "dice",
+        # "poll",
+        # "location",
+        # "venue",
+        "sticker"
+    ):
+        obj = getattr(update, message_type)
+        if obj:
+            return obj, obj.file_id 
+
+AutoCaptionBotV1.run()
