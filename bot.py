@@ -13,7 +13,7 @@ logging.getLogger("pyrogram").setLevel(logging.WARNING)
 
 class autocaption(Client):
     
-    super().__init__(
+    super(autocaption, self).__init__(
     name="Captioner",
     bot_token=Config.BOT_TOKEN,
     api_id=Config.API_ID,
@@ -22,9 +22,8 @@ class autocaption(Client):
     plugins=dict(
         root="Plugins"
     )
-  
- )
-        
+)
+
 
 if __name__ == "__main__" :
     autocaption().run()
