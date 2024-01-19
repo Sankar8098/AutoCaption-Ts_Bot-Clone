@@ -4,10 +4,9 @@ logging.basicConfig(level=logging.DEBUG,
 logger = logging.getLogger(__name__)
 
 import pyrogram, os, asyncio
+from bot import autocaption
+from config import Config
 
-AutoCaptionBotV1 = pyrogram.Client(
-   name="AutoCaptionBotV1", api_id=app_id, api_hash=api_hash, bot_token=bot_token)
-# =
 usercaption_position = Config.CAPTION_POSITION
 caption_position = usercaption_position.lower()
 
