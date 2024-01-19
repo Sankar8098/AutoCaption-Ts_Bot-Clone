@@ -20,4 +20,4 @@ class AutoCaptionBotV1(pyrogram.Client):
         )
 
 if __name__ == "__main__":
-    autocaption().run()
+    AutoCaptionBotV1.run()
