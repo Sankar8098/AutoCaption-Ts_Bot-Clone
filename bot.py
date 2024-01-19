@@ -3,7 +3,9 @@ import logging
 import os
 from config import Config
 
-class autocaption(pyrogram.Client):
+class AutoCaptionBotV1(pyrogram.Client):
+
+   
 
     def __init__(self):
         super().__init__(
